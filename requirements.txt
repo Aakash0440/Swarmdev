@@ -1,0 +1,27 @@
+# ── Core LLM providers (install at least one) ─────────────────────────────────
+groq>=0.9.0                   # Groq fast inference — free at console.groq.com
+google-genai>=1.0.0              # Gemini (new SDK — replaces google-generativeai) — free at aistudio.google.com/app/apikey
+
+# ── Optional providers ────────────────────────────────────────────────────────
+openai>=1.30.0                # OpenAI (paid)
+# ollama>=0.2.0               # Local models — uncomment if using Ollama
+
+# ── Async & utilities ─────────────────────────────────────────────────────────
+asyncio-throttle>=1.0.2
+aiofiles>=23.2.1
+python-dotenv>=1.0.0          # .env file loading
+click>=8.1.0
+rich>=13.7.0
+pyyaml>=6.0.1
+
+# ── Vector memory (optional but recommended for large projects) ───────────────
+chromadb>=0.4.22
+
+# ── Code verification ─────────────────────────────────────────────────────────
+flake8>=7.0.0
+mypy>=1.8.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
+# ── Build tools ───────────────────────────────────────────────────────────────
+setuptools>=69.0.0

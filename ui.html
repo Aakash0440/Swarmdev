@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SwarmDev</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0a0f;
+    --surface:  #111118;
+    --border:   #1e1e2e;
+    --border2:  #2a2a3e;
+    --accent:   #00d4ff;
+    --accent2:  #7c3aed;
+    --green:    #10b981;
+    --yellow:   #f59e0b;
+    --red:      #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --dim:      #334155;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    grid-template-columns: 260px 1fr 340px;
+    grid-template-areas:
+      "header header header"
+      "sidebar main  panel";
+  }
+
+  /* ── Header ── */
+  header {
+    grid-area: header;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo-sub { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .header-status { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+         box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  .dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .header-nav { display: flex; gap: 4px; }
+  .nav-btn {
+    background: none; border: 1px solid transparent; color: var(--muted);
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 12px; transition: all .15s;
+  }
+  .nav-btn:hover, .nav-btn.active {
+    color: var(--accent); border-color: var(--accent);
+    background: rgba(0,212,255,.06);
+  }
+
+  /* ── Sidebar ── */
+  aside {
+    grid-area: sidebar;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-title {
+    padding: 16px; font-size: 10px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--border);
+  }
+  .job-list { flex: 1; overflow-y: auto; }
+  .job-item {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .1s; position: relative;
+  }
+  .job-item:hover { background: rgba(255,255,255,.03); }
+  .job-item.active { background: rgba(0,212,255,.06); border-left: 2px solid var(--accent); }
+  .job-name { font-weight: 500; color: var(--text); font-size: 12px; }
+  .job-meta { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .job-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    margin-top: 5px;
+  }
+  .badge-queued  { background: rgba(245,158,11,.15); color: var(--yellow); }
+  .badge-running { background: rgba(0,212,255,.15);  color: var(--accent); }
+  .badge-done    { background: rgba(16,185,129,.15); color: var(--green);  }
+  .badge-failed  { background: rgba(239,68,68,.15);  color: var(--red);    }
+
+  /* ── Main area ── */
+  main {
+    grid-area: main;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    background: var(--surface); padding: 0 20px; gap: 0;
+  }
+  .tab {
+    padding: 14px 18px; cursor: pointer; font-size: 12px;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    transition: all .15s; font-family: inherit;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { flex: 1; overflow: auto; padding: 24px; display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Submit form ── */
+  .form-grid { display: grid; gap: 16px; max-width: 680px; }
+  .field label {
+    display: block; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border2);
+    color: var(--text); border-radius: 8px; padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    transition: border-color .15s; outline: none; resize: vertical;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,.1);
+  }
+  .field textarea { min-height: 120px; }
+  .field select option { background: var(--surface); }
+
+  .stack-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .stack-card {
+    border: 1px solid var(--border2); border-radius: 8px; padding: 12px 14px;
+    cursor: pointer; transition: all .15s; background: var(--surface);
+  }
+  .stack-card:hover { border-color: var(--accent); }
+  .stack-card.selected { border-color: var(--accent); background: rgba(0,212,255,.06); }
+  .stack-card input { display: none; }
+  .stack-name { font-weight: 500; font-size: 12px; color: var(--text); }
+  .stack-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 8px; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    font-weight: 500; border: none; transition: all .15s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; box-shadow: 0 0 20px rgba(0,212,255,.2);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(0,212,255,.35); transform: translateY(-1px); }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border2); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .demo-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 8px; }
+  .demo-card {
+    border: 1px solid var(--border2); border-radius: 10px; padding: 16px;
+    cursor: pointer; transition: all .15s; background: var(--surface);
+    text-align: left;
+  }
+  .demo-card:hover { border-color: var(--accent2); background: rgba(124,58,237,.06); }
+  .demo-card h4 { font-size: 13px; color: var(--text); margin-bottom: 5px; }
+  .demo-card p { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Log viewer ── */
+  .log-box {
+    background: #05050a; border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; font-size: 12px;
+    height: 100%; overflow-y: auto; line-height: 1.8;
+  }
+  .log-line { display: flex; gap: 10px; }
+  .log-ts { color: var(--dim); flex-shrink: 0; }
+  .log-info    { color: var(--text); }
+  .log-warning { color: var(--yellow); }
+  .log-error   { color: var(--red); }
+  .log-empty   { color: var(--dim); }
+
+  /* ── Progress bar ── */
+  .progress-wrap { margin: 16px 0; }
+  .progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: var(--muted); }
+  .progress-track { height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+  .progress-fill  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+                    transition: width .4s ease; border-radius: 2px; }
+
+  /* ── File tree ── */
+  .file-tree { font-size: 12px; }
+  .file-node { padding: 5px 8px; border-radius: 5px; cursor: pointer;
+               display: flex; align-items: center; gap: 8px; transition: background .1s; }
+  .file-node:hover { background: rgba(255,255,255,.04); }
+  .file-node .icon { width: 14px; text-align: center; }
+  .file-node .name { color: var(--text); }
+  .file-node .size { color: var(--muted); margin-left: auto; font-size: 10px; }
+
+  /* ── Code preview ── */
+  .code-preview {
+    background: #05050a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font-size: 11px; line-height: 1.7; overflow: auto;
+    white-space: pre; color: #a8b8d8; max-height: 400px;
+  }
+
+  /* ── Right panel ── */
+  .panel {
+    grid-area: panel;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+  .stat-row { display: flex; justify-content: space-between; padding: 8px 0;
+              border-bottom: 1px solid var(--border); font-size: 12px; }
+  .stat-label { color: var(--muted); }
+  .stat-value { color: var(--text); font-weight: 500; }
+
+  .section-title { font-size: 10px; letter-spacing: 1.5px; color: var(--muted);
+                   text-transform: uppercase; margin: 14px 0 8px; }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    body { grid-template-columns: 1fr; grid-template-areas: "header" "main" "sidebar" "panel"; }
+    aside, .panel { display: none; }
+  }
+
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state h3 { font-size: 15px; color: var(--dim); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">SwarmDev <span class="logo-sub" style="-webkit-text-fill-color:var(--muted)">v3</span></div>
+  <div class="header-nav">
+    <button class="nav-btn active" onclick="showSection('submit')">Submit</button>
+    <button class="nav-btn" onclick="showSection('monitor')">Monitor</button>
+    <button class="nav-btn" onclick="showSection('files')">Files</button>
+  </div>
+  <div class="header-status">
+    <div class="dot" id="serverDot"></div>
+    <span id="serverLabel" style="color:var(--muted);font-size:11px">Connecting…</span>
+  </div>
+</header>
+
+<!-- Sidebar: job list -->
+<aside>
+  <div class="sidebar-title">Jobs</div>
+  <div class="job-list" id="jobList">
+    <div class="empty-state"><h3>No jobs yet</h3></div>
+  </div>
+</aside>
+
+<!-- Main content -->
+<main>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('submit-tab')">New Task</button>
+    <button class="tab" onclick="switchTab('demo-tab')">Demos</button>
+    <button class="tab" onclick="switchTab('logs-tab')">Live Logs</button>
+    <button class="tab" onclick="switchTab('history-tab')">History</button>
+  </div>
+
+  <!-- Submit tab -->
+  <div class="tab-content active" id="submit-tab">
+    <div class="form-grid">
+      <div class="field">
+        <label>Project Name</label>
+        <input type="text" id="projectName" placeholder="my_awesome_project" />
+      </div>
+      <div class="field">
+        <label>Task Description</label>
+        <textarea id="taskDesc" placeholder="Build a real-time chat app with WebSocket support, JWT auth, message history stored in PostgreSQL, and a React frontend with dark mode…"></textarea>
+      </div>
+      <div class="field">
+        <label>Stack</label>
+        <div class="stack-grid">
+          <label class="stack-card selected">
+            <input type="radio" name="stack" value="fullstack" checked>
+            <div class="stack-name">Fullstack</div>
+            <div class="stack-desc">React + FastAPI + PostgreSQL</div>
+          </label>
+          <label class="stack-card">
+            <input type="radio" name="stack" value="react">
+            <div class="stack-name">React SPA</div>
+            <div class="stack-desc">Frontend only</div>
+          </label>
+          <label class="stack-card">
+            <input type="radio" name="stack" value="python">
+            <div class="stack-name">Python API</div>
+            <div class="stack-desc">FastAPI backend only</div>
+          </label>
+          <label class="stack-card">
+            <input type="radio" name="stack" value="ml">
+            <div class="stack-name">ML Pipeline</div>
+            <div class="stack-desc">PyTorch + MLflow</div>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="submitJob()">
+          <span>▶</span> Deploy Swarm
+        </button>
+        <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+      </div>
+      <div id="submitMsg" style="font-size:12px;color:var(--muted)"></div>
+    </div>
+  </div>
+
+  <!-- Demo tab -->
+  <div class="tab-content" id="demo-tab">
+    <p style="color:var(--muted);margin-bottom:16px;font-size:12px">Pre-built task presets — one click to launch.</p>
+    <div class="demo-grid">
+      <button class="demo-card" onclick="runDemo('collab_editor')">
+        <h4>⚡ Collaborative Code Editor</h4>
+        <p>WebSocket sync, OT conflict resolution, Monaco editor, Redis pub/sub, JWT auth</p>
+      </button>
+      <button class="demo-card" onclick="runDemo('ecommerce')">
+        <h4>🛒 E-Commerce Platform</h4>
+        <p>Product listings, cart, Stripe checkout, admin dashboard, inventory management</p>
+      </button>
+      <button class="demo-card" onclick="runDemo('ml_pipeline')">
+        <h4>🧠 ML Training Pipeline</h4>
+        <p>Data ingestion, PyTorch training, MLflow tracking, model serving via FastAPI</p>
+      </button>
+      <button class="demo-card" onclick="runDemo('rest_api')">
+        <h4>🔒 REST API with Auth</h4>
+        <p>JWT + RBAC, PostgreSQL, Alembic migrations, rate limiting, OpenAPI docs</p>
+      </button>
+    </div>
+    <div id="demoMsg" style="margin-top:16px;font-size:12px;color:var(--muted)"></div>
+  </div>
+
+  <!-- Live logs tab -->
+  <div class="tab-content" id="logs-tab" style="display:flex;flex-direction:column;height:calc(100vh - 110px)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="color:var(--muted);font-size:11px">Watching:</span>
+      <span id="watchingJob" style="color:var(--accent);font-size:11px">—</span>
+      <span id="logSpinner" style="display:none"><span class="spinner"></span></span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressLabel">Idle</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div class="log-box" id="logBox">
+      <div class="log-empty">Select a job from the sidebar to watch live logs…</div>
+    </div>
+  </div>
+
+  <!-- History tab -->
+  <div class="tab-content" id="history-tab">
+    <div id="historyContent">
+      <div class="empty-state"><h3>No history yet</h3></div>
+    </div>
+  </div>
+</main>
+
+<!-- Right panel: job details -->
+<div class="panel">
+  <div class="panel-header">
+    <span>Job Details</span>
+    <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px" onclick="refreshAll()">↻ Refresh</button>
+  </div>
+  <div class="panel-body" id="jobDetails">
+    <div class="empty-state" style="padding:40px 10px">
+      <h3>Select a job</h3>
+      <p style="font-size:11px;margin-top:6px">Click any job in the sidebar</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let jobs = [];
+let selectedJobId = null;
+let logEventSource = null;
+let pollInterval = null;
+
+// ── Server health ──────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health');
+    const ok = r.ok;
+    document.getElementById('serverDot').className = 'dot' + (ok ? '' : ' offline');
+    document.getElementById('serverLabel').textContent = ok ? 'Server online' : 'Server offline';
+  } catch {
+    document.getElementById('serverDot').className = 'dot offline';
+    document.getElementById('serverLabel').textContent = 'Server offline';
+  }
+}
+
+// ── Fetch & render jobs ────────────────────────────────────────────────────
+async function fetchJobs() {
+  try {
+    const r = await fetch(API + '/jobs');
+    jobs = await r.json();
+    renderJobList();
+    renderHistory();
+    if (selectedJobId) renderJobDetails(jobs.find(j => j.id === selectedJobId));
+  } catch {}
+}
+
+function renderJobList() {
+  const el = document.getElementById('jobList');
+  if (!jobs.length) {
+    el.innerHTML = '<div class="empty-state"><h3>No jobs yet</h3></div>';
+    return;
+  }
+  el.innerHTML = jobs.map(j => `
+    <div class="job-item ${j.id === selectedJobId ? 'active' : ''}" onclick="selectJob('${j.id}')">
+      <div class="job-name">${j.project_name}</div>
+      <div class="job-meta">${j.stack} · ${j.created_at.slice(11,19)}</div>
+      <span class="job-badge badge-${j.status}">${j.status}</span>
+    </div>
+  `).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyContent');
+  if (!jobs.length) {
+    el.innerHTML = '<div class="empty-state"><h3>No history yet</h3></div>';
+    return;
+  }
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+          <th style="text-align:left;padding:8px 6px">ID</th>
+          <th style="text-align:left;padding:8px 6px">Project</th>
+          <th style="text-align:left;padding:8px 6px">Stack</th>
+          <th style="text-align:left;padding:8px 6px">Status</th>
+          <th style="text-align:right;padding:8px 6px">Files</th>
+          <th style="text-align:right;padding:8px 6px">Tokens</th>
+          <th style="text-align:left;padding:8px 6px">Started</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${jobs.map(j => `
+          <tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="selectJob('${j.id}')">
+            <td style="padding:8px 6px;color:var(--muted)">${j.id.slice(0,8)}</td>
+            <td style="padding:8px 6px;font-weight:500">${j.project_name}</td>
+            <td style="padding:8px 6px;color:var(--accent)">${j.stack}</td>
+            <td style="padding:8px 6px"><span class="job-badge badge-${j.status}">${j.status}</span></td>
+            <td style="padding:8px 6px;text-align:right;color:var(--muted)">${j.files_generated?.length ?? '-'}</td>
+            <td style="padding:8px 6px;text-align:right;color:var(--muted)">${j.tokens_used ? j.tokens_used.toLocaleString() : '-'}</td>
+            <td style="padding:8px 6px;color:var(--muted)">${(j.created_at||'').slice(0,19).replace('T',' ')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderJobDetails(job) {
+  if (!job) return;
+  const el = document.getElementById('jobDetails');
+  const ts = job.task_status || {};
+  const done = ts.done || 0;
+  const total = (ts.done||0)+(ts.running||0)+(ts.pending||0);
+
+  el.innerHTML = `
+    <div class="stat-row"><span class="stat-label">ID</span><span class="stat-value">${job.id.slice(0,8)}</span></div>
+    <div class="stat-row"><span class="stat-label">Status</span><span class="stat-value"><span class="job-badge badge-${job.status}">${job.status}</span></span></div>
+    <div class="stat-row"><span class="stat-label">Stack</span><span class="stat-value">${job.stack}</span></div>
+    <div class="stat-row"><span class="stat-label">Tokens</span><span class="stat-value">${(job.tokens_used||0).toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Files</span><span class="stat-value">${job.files_generated?.length||0}</span></div>
+    <div class="stat-row"><span class="stat-label">Elapsed</span><span class="stat-value">${job.elapsed_seconds?.toFixed(1)||'-'}s</span></div>
+    ${job.error ? `<div style="margin-top:10px;padding:10px;background:rgba(239,68,68,.1);border-radius:6px;color:var(--red);font-size:11px">${job.error}</div>` : ''}
+    
+    <div class="section-title">Output Files</div>
+    <div class="file-tree">
+      ${(job.files_generated||[]).map(f => `
+        <div class="file-node" onclick="previewFile('${f}')">
+          <span class="icon">${fileIcon(f)}</span>
+          <span class="name">${f.split(/[\\/]/).pop()}</span>
+        </div>
+      `).join('') || '<div style="color:var(--muted);font-size:11px;padding:4px">None yet</div>'}
+    </div>
+
+    <div id="filePreview" style="margin-top:14px"></div>
+  `;
+}
+
+function fileIcon(f) {
+  if (f.endsWith('.py'))  return '🐍';
+  if (f.endsWith('.jsx') || f.endsWith('.tsx')) return '⚛';
+  if (f.endsWith('.yml') || f.endsWith('.yaml')) return '🐳';
+  if (f.endsWith('.md'))  return '📝';
+  if (f.endsWith('.js'))  return '📜';
+  return '📄';
+}
+
+async function previewFile(path) {
+  try {
+    const r = await fetch(API + '/files/content?path=' + encodeURIComponent(path));
+    const data = await r.json();
+    const el = document.getElementById('filePreview');
+    el.innerHTML = `
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">${path.split(/[\\/]/).pop()}</div>
+      <div class="code-preview">${escHtml(data.content.slice(0, 2000))}</div>
+    `;
+  } catch {}
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Select job ─────────────────────────────────────────────────────────────
+function selectJob(id) {
+  selectedJobId = id;
+  renderJobList();
+  const job = jobs.find(j => j.id === id);
+  renderJobDetails(job);
+  watchJobLogs(id, job);
+}
+
+function watchJobLogs(id, job) {
+  // Update log tab header
+  document.getElementById('watchingJob').textContent = job?.project_name || id.slice(0,8);
+
+  // Clear existing log stream
+  if (logEventSource) { logEventSource.close(); logEventSource = null; }
+
+  // Render existing logs
+  const logBox = document.getElementById('logBox');
+  logBox.innerHTML = '';
+  for (const entry of (job?.logs || [])) appendLog(entry);
+
+  // Update progress
+  updateProgress(job);
+
+  // Stream new logs if still running
+  if (job?.status === 'running' || job?.status === 'queued') {
+    document.getElementById('logSpinner').style.display = 'inline';
+    logEventSource = new EventSource(`${API}/jobs/${id}/logs/stream`);
+    logEventSource.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.__done__) {
+        logEventSource.close();
+        document.getElementById('logSpinner').style.display = 'none';
+        fetchJobs();
+        return;
+      }
+      appendLog(data);
+      fetchJobs(); // update progress
+    };
+  } else {
+    document.getElementById('logSpinner').style.display = 'none';
+  }
+}
+
+function appendLog(entry) {
+  const logBox = document.getElementById('logBox');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  const ts = (entry.ts || '').slice(11, 19);
+  const lvl = entry.level || 'info';
+  div.innerHTML = `<span class="log-ts">${ts}</span><span class="log-${lvl}">${escHtml(entry.msg||'')}</span>`;
+  logBox.appendChild(div);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function updateProgress(job) {
+  if (!job) return;
+  const ts = job.task_status || {};
+  const done  = ts.done || 0;
+  const total = (ts.done||0)+(ts.running||0)+(ts.pending||0)||1;
+  const pct   = Math.round(done/total*100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent  = pct + '%';
+  document.getElementById('progressLabel').textContent = `${job.project_name} [${job.status}] — ${done}/${total} tasks`;
+}
+
+// ── Submit ─────────────────────────────────────────────────────────────────
+async function submitJob() {
+  const name = document.getElementById('projectName').value.trim().replace(/\s+/g,'_') || 'project';
+  const desc = document.getElementById('taskDesc').value.trim();
+  const stack = document.querySelector('input[name="stack"]:checked')?.value || 'fullstack';
+
+  if (!desc) {
+    document.getElementById('submitMsg').textContent = '⚠ Please enter a task description.';
+    return;
+  }
+
+  document.getElementById('submitMsg').textContent = '⏳ Submitting…';
+  try {
+    const r = await fetch(API + '/jobs', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({project_name: name, description: desc, stack}),
+    });
+    const job = await r.json();
+    document.getElementById('submitMsg').textContent = `✓ Job ${job.id.slice(0,8)} queued!`;
+    await fetchJobs();
+    selectJob(job.id);
+    switchTab('logs-tab');
+    showSection('monitor');
+  } catch (e) {
+    document.getElementById('submitMsg').textContent = '✗ Error: ' + e.message;
+  }
+}
+
+async function runDemo(name) {
+  document.getElementById('demoMsg').textContent = '⏳ Starting demo…';
+  try {
+    const r = await fetch(`${API}/jobs/demo/${name}`, {method:'POST'});
+    const job = await r.json();
+    document.getElementById('demoMsg').textContent = `✓ Demo ${job.id.slice(0,8)} started!`;
+    await fetchJobs();
+    selectJob(job.id);
+    switchTab('logs-tab');
+  } catch (e) {
+    document.getElementById('demoMsg').textContent = '✗ Error: ' + e.message;
+  }
+}
+
+function clearForm() {
+  document.getElementById('projectName').value = '';
+  document.getElementById('taskDesc').value = '';
+  document.getElementById('submitMsg').textContent = '';
+}
+
+// ── Nav ────────────────────────────────────────────────────────────────────
+function showSection(s) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (s === 'submit')  switchTab('submit-tab');
+  if (s === 'monitor') switchTab('logs-tab');
+  if (s === 'files')   switchTab('history-tab');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => { t.classList.remove('active'); t.style.display='none'; });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.style.display='block'; }
+  const idx = ['submit-tab','demo-tab','logs-tab','history-tab'].indexOf(id);
+  document.querySelectorAll('.tab')[idx]?.classList.add('active');
+}
+
+// Stack card selection
+document.querySelectorAll('.stack-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.stack-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+
+function refreshAll() { checkHealth(); fetchJobs(); }
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+checkHealth();
+fetchJobs();
+setInterval(checkHealth, 5000);
+setInterval(fetchJobs, 3000);
+</script>
+</body>
+</html>
